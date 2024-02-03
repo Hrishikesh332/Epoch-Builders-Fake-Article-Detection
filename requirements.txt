@@ -1,0 +1,8 @@
+kaleido
+pandas
+numpy
+langchain
+llamaindex
+goose3
+plolty
+vaderSentiment
