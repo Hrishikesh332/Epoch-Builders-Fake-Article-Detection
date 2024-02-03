@@ -40,15 +40,9 @@ import llama_index
 
 import requests
 
-API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
-headers = {"Authorization": "Bearer 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"}
-
-def query_summ(payload):
-	response = requests.post(API_URL, headers=headers, json=payload)
-	return response.json()
 	
 
-print(os.getenv('TWITTER_API_KEY'))
+# print(os.getenv('TWITTER_API_KEY'))
 
 # TwitterTweetReader = download_loader("TwitterTweetReader")
 
@@ -82,16 +76,24 @@ st.markdown("<h1 style='text-align: center; color: white';>Samachar AI 💬</h1>
 st.markdown("---")
 
 if selected=="Main":
+    API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
+    headers = {"Authorization": os.getenv('Token')}
+
+    def query_summ(payload):
+        response = requests.post(API_URL, headers=headers, json=payload)
+        return response.json()
+
     link=st.text_input("Put the Article link below to check -")
     check=st.button("Check and Analyze")
     if check:
-
-        def sent(link):
-            senti=[]
+        def clean(link):
             url = link
             goose = Goose()
             articles = goose.extract(url)
             sentence1 = articles.cleaned_text
+            return sentence1
+        def sent(sentence1):
+            senti=[]
             sid_obj = SentimentIntensityAnalyzer()
             sentiment_dict = sid_obj.polarity_scores([sentence1])
             print(sentiment_dict['neg']*100, "% Negative")
@@ -132,55 +134,61 @@ if selected=="Main":
             )
 
             return fig
-
-        f1=sent(link)
+        c=clean(link)
+        f1=sent(c)
         st.plotly_chart(f1)
+        output = query_summ({
+	            "inputs": c,
+                })
+        st.subheader("Summarization -")
+        st.write(output[0]['summary_text'])
 
 
 if selected=="Chat":
-    load_dotenv()
-    print(os.getenv('OPENAI_API_KEY'))
-    os.getenv('OPENAI_API_KEY')
+    pass
+    # load_dotenv()
+    # print(os.getenv('OPENAI_API_KEY'))
+    # os.getenv('OPENAI_API_KEY')
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    # if "messages" not in st.session_state:
+    #     st.session_state.messages = []
 
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    # for message in st.session_state.messages:
+    #     with st.chat_message(message["role"]):
+    #         st.markdown(message["content"])
 
-    if prompt := st.chat_input("Welcome to Llama Press, How may I help you?"):
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    # if prompt := st.chat_input("Welcome to Llama Press, How may I help you?"):
+    #     with st.chat_message("user"):
+    #         st.markdown(prompt)
+    #     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    def chat(p):
-        query = p
-        # reader = TwitterTweetReader(os.getenv('BEARER_TOKEN'))
-        # documents = reader.load_data(["ANI"])
-        # documents1 = reader.load_data(["ZeeNews"])
-        # documents2 = reader.load_data(["TV9Bharatvarsh"])
-        # documents3 = reader.load_data(["Republic_Bharat"])
-        # documents4 = reader.load_data(["AajTak"])
-        loader = TwitterTweetLoader.from_secrets(
+    # def chat(p):
+    #     query = p
+    #     # reader = TwitterTweetReader(os.getenv('BEARER_TOKEN'))
+    #     # documents = reader.load_data(["ANI"])
+    #     # documents1 = reader.load_data(["ZeeNews"])
+    #     # documents2 = reader.load_data(["TV9Bharatvarsh"])
+    #     # documents3 = reader.load_data(["Republic_Bharat"])
+    #     # documents4 = reader.load_data(["AajTak"])
+    #     loader = TwitterTweetLoader.from_secrets(
        
-            access_token=os.getenv('ACCESS_TOKEN'),
-            access_token_secret=os.getenv('ACCESS_TOKEN_SECRET'),
-            consumer_key=os.getenv('CONSUMER_API_KEY'),
-            consumer_secret=os.getenv('CONSUMER_API_KEY_SECRET'),
-            twitter_users=['elonmusk'],
-            number_tweets=50,
-        )
-        documents = loader.load()
-        st.write(documents[:5])
+    #         access_token=os.getenv('ACCESS_TOKEN'),
+    #         access_token_secret=os.getenv('ACCESS_TOKEN_SECRET'),
+    #         consumer_key=os.getenv('CONSUMER_API_KEY'),
+    #         consumer_secret=os.getenv('CONSUMER_API_KEY_SECRET'),
+    #         twitter_users=['elonmusk'],
+    #         number_tweets=50,
+    #     )
+    #     documents = loader.load()
+    #     st.write(documents[:5])
         
-        # agent = llama_index.GPTVectorStoreIndex.from_documents(documents)
-        # chat_engine = agent.as_chat_engine(verbose=True)
-        # response = chat_engine.chat(query)
-        # return response
+    #     # agent = llama_index.GPTVectorStoreIndex.from_documents(documents)
+    #     # chat_engine = agent.as_chat_engine(verbose=True)
+    #     # response = chat_engine.chat(query)
+    #     # return response
 
-    result = chat(prompt)
-    response = f"Echo: {result}"
-    with st.chat_message("assistant"):
-        st.markdown(response)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    # result = chat(prompt)
+    # response = f"Echo: {result}"
+    # with st.chat_message("assistant"):
+    #     st.markdown(response)
+    # st.session_state.messages.append({"role": "assistant", "content": response})
