@@ -198,10 +198,8 @@ if selected=="Main":
         json_str = json.dumps(result_dict)
         data_parsed = json.loads(json_str)
 
-        # Create a pie chart
-        fig = go.Figure(go.Pie(labels=list(data_parsed.keys()), values=list(data_parsed.values())))
 
-        # Update layout for a professional look
+        fig = go.Figure(go.Pie(labels=list(data_parsed.keys()), values=list(data_parsed.values())))
         fig.update_layout(
             autosize=False,
             width=500,
@@ -211,11 +209,34 @@ if selected=="Main":
             plot_bgcolor='rgba(0,0,0,0)',
             legend=dict(font=dict(family="Courier New, monospace", size=12, color="#7f7f7f"))
         )
-
-        # Display the chart in Streamlit
         st.plotly_chart(fig, use_container_width=True)
+        output_prop = queryprop({
+        "inputs":  c,
+        })
+        
+        yes = output_prop[0][0]['score']
+        no = 1 - yes
+        labels_prop = ["Propoganda", "Non-Propoganda"]
+        values_prop = [yes, no]
+        result_dict = dict(zip(labels_prop, values_prop))
+        json_str = json.dumps(result_dict)
+        data_parsed = json.loads(json_str)
+        fig3 = go.Figure(go.Bar(x=labels_prop, y=values_prop))
+        fig3.update_layout(
+            autosize=False,
+            width=500,
+            height=500,
+            margin=dict(l=0, r=0, b=0, t=0, pad=0),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            legend=dict(font=dict(family="Courier New, monospace", size=12, color="#7f7f7f"))
+        )
 
+        st.write("Propaganda Detection -")
 
+        st.plotly_chart(fig3, use_container_width=True)
+
+        
 
 
 
