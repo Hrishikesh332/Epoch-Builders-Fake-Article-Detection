@@ -15,6 +15,7 @@ from PIL import Image
 import base64
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import logging
+from langchain.embeddings import HuggingFaceEmbeddings
 
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -36,6 +37,14 @@ from llama_index import SimpleDirectoryReader
 from llama_index import GPTVectorStoreIndex
 from langchain_community.document_loaders import TwitterTweetLoader
 import llama_index
+
+
+from langchain.chains import RetrievalQAWithSourcesChain
+from langchain.chains.question_answering import load_qa_chain
+from langchain import OpenAI
+import pickle
+
+
 
 
 import requests
@@ -143,9 +152,17 @@ if selected=="Main":
         st.subheader("Summarization -")
         st.write(output[0]['summary_text'])
 
-
+with open("Model/faiss_store_model.pkl", "rb") as f:
+        VectorStore = pickle.load(f)
 if selected=="Chat":
-    pass
+    ques=st.text_input("Ask any question and Confirm Fake News")
+    submit_ques=st.button("Click Here")
+    if submit_ques:
+        llm=OpenAI(temperature=0, model_name='gpt-3.5-turbo-0125')
+        chain = RetrievalQAWithSourcesChain.from_llm(llm=llm, retriever=VectorStore.as_retriever())
+        st.write(chain({"question": ques}, return_only_outputs=True))
+
+ 
     # load_dotenv()
     # print(os.getenv('OPENAI_API_KEY'))
     # os.getenv('OPENAI_API_KEY')
