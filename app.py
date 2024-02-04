@@ -100,7 +100,7 @@ if selected=="Main":
     INFERENCE_URL_HATE = "https://api-inference.huggingface.co/models/IMSyPP/hate_speech_en"
 
 
-    headers = {"Authorization": os.getenv('Token')}
+    headers = {"Authorization": os.getenv("Token")}
 
     def query_summ(payload):
         response = requests.post(API_URL, headers=headers, json=payload)
