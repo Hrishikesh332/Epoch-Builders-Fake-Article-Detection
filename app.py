@@ -57,6 +57,14 @@ from langchain.text_splitter import CharacterTextSplitter
 from PyPDF2 import PdfReader
 from langchain.callbacks import get_openai_callback
 from dotenv import load_dotenv
+from huggingface_hub import InferenceClient
+import google.generativeai as genai
+
+genai.configure(api_key=os.getenv("GEMINI"))
+
+client = InferenceClient(model=os.getenv("ENDPOINT_PROP"),  token=os.getenv("Token"))
+client_hate = InferenceClient(model="ENDPOINT_HATE",  token=os.getenv("Token"))
+
 
 load_dotenv()
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -160,61 +168,103 @@ if selected=="Main":
                     'x':0.5,
                     'xanchor': 'center',
                     'yanchor': 'top'},
+                margin=dict(l=0, r=0, b=0, t=0, pad=0),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                legend=dict(font=dict(family="Courier New, monospace", size=12, color="#7f7f7f")),
                 font=dict(family="Courier New, monospace", size=12, color="#7f7f7f")
             )
 
             return fig
         c=clean(link)
         st.subheader("Summarization -")
-        output = query_summ({
-	            "inputs": c,
-                })
-        # summ=output[0]['summary_text']
+        # output = query_summ({
+	    #         "inputs": c,
+        #         })
+        # # summ=output[0]['summary_text']
         
-        st.write(output[0]['summary_text'])
+        # st.write(output[0]['summary_text'])
+        generation_config = {
+        "temperature": 0.2,
+        "top_p": 1,
+        "top_k": 1,
+        "max_output_tokens": 2048,
+        }
+
+        safety_settings = [
+        {
+            "category": "HARM_CATEGORY_HARASSMENT",
+            "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+            "category": "HARM_CATEGORY_HATE_SPEECH",
+            "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        ]
+
+        model = genai.GenerativeModel(model_name="gemini-pro",
+                                    generation_config=generation_config,
+                                    safety_settings=safety_settings)
+
+        prompt_parts = [
+        "Summarize the below text -\n" +c,
+        ]
+
+        response = model.generate_content(prompt_parts)
+        st.write(response.text)
         f1=sent(c)
         st.subheader("Sentiment Analysis -")
         st.plotly_chart(f1)
 
 
-        st.subheader("Hate Speech Detection -")
-        output_hate=query_hate({
-        "inputs": c,})
+
+
+        result_prop = client.text_classification(c[0:200])
+        result_hate = client_hate.text_classification(c[0:200])
+        st.subheader("Hate Detection -")
+        st.write(result_hate)
+        # output_hate=query_hate({
+        #             "inputs": c,})
         # print(output[0][0])
         result = {}
-        # st.write(output_hate[0])
-        for data in output_hate[0]:
-            if data['label'] == "LABEL_0":
-                result["ACCEPTABLE"] = data['score']
-            elif data['label'] == "LABEL_1":
-                result["INAPPROAPRIATE"] = data['score']
-            elif data['label'] == "LABEL_2":
-                result["OFFENSIVE"] = data['score']
-            elif data['label'] == "LABEL_3":
-                result["VIOLENT"] = data['score']
+        # # st.write(output_hate[0])
+        # for data in output_hate[0]:
+        if result_hate['label'] == "LABEL_0":
+            result["ACCEPTABLE"] = result_hate['score']
+        elif result_hate['label'] == "LABEL_1":
+            result["INAPPROAPRIATE"] = result_hate['score']
+        elif result_hate['label'] == "LABEL_2":
+            result["OFFENSIVE"] = result_hate['score']
+        elif result_hate['label'] == "LABEL_3":
+            result["VIOLENT"] = result_hate['score']
         labels = list(result.keys())
         values = list(result.values())
         result_dict = dict(zip(labels, values))
         json_str = json.dumps(result_dict)
         data_parsed = json.loads(json_str)
+        st.write(data_parsed)
 
 
-        fig = go.Figure(go.Pie(labels=list(data_parsed.keys()), values=list(data_parsed.values())))
-        fig.update_layout(
-            autosize=False,
-            width=500,
-            height=500,
-            margin=dict(l=0, r=0, b=0, t=0, pad=0),
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            legend=dict(font=dict(family="Courier New, monospace", size=12, color="#7f7f7f"))
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        output_prop = queryprop({
-        "inputs":  c,
-        })
-        
-        yes = output_prop[0][0]['score']
+        # fig = go.Figure(go.Pie(labels=list(data_parsed.keys()), values=list(data_parsed.values())))
+        # fig.update_layout(
+        #     autosize=False,
+        #     width=500,
+        #     height=500,
+        #     margin=dict(l=0, r=0, b=0, t=0, pad=0),
+        #     paper_bgcolor='rgba(0,0,0,0)',
+        #     plot_bgcolor='rgba(0,0,0,0)',
+        #     legend=dict(font=dict(family="Courier New, monospace", size=12, color="#7f7f7f"))
+        # )
+        # st.plotly_chart(fig, use_container_width=True)
+        yes=result_prop["score"]
         no = 1 - yes
         labels_prop = ["Propoganda", "Non-Propoganda"]
         values_prop = [yes, no]
@@ -232,7 +282,7 @@ if selected=="Main":
             legend=dict(font=dict(family="Courier New, monospace", size=12, color="#7f7f7f"))
         )
 
-        st.write("Propaganda Detection -")
+        st.subheader("Propaganda Detection -")
 
         st.plotly_chart(fig3, use_container_width=True)
 
